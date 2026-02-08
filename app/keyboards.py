@@ -13,17 +13,27 @@ after_start = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='О нас')]],
 after_about = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Оставить заявку')]], resize_keyboard=True)
 
 brand = ReplyKeyboardMarkup(keyboard=[
-    [[KeyboardButton(text='Nike')], [KeyboardButton(text='Adidas')]],
-    [[KeyboardButton(text='Puma')], [KeyboardButton(text='Mizuno')]],
+    [KeyboardButton(text='Nike')], 
+    [KeyboardButton(text='Adidas')],
+    [KeyboardButton(text='Puma')], 
+    [KeyboardButton(text='Mizuno')],
     [KeyboardButton(text='Joma')]
 ], 
 resize_keyboard=True,
 input_field_placeholder = 'Какой бренд Вас интересует?')
 
-model = ReplyKeyboardMarkup(keyboard=[
-    [[KeyboardButton(text='Nike')], [KeyboardButton(text='Adidas')]],
-    [[KeyboardButton(text='Puma')], [KeyboardButton(text='43-44')]],
-    [KeyboardButton(text='Больше 44')]
+model_nike = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text='Phantom')], 
+    [KeyboardButton(text='Mercurial')],
+    [KeyboardButton(text='Tiempo')],
+], 
+resize_keyboard=True,
+input_field_placeholder = 'Какая модель Вас интересует?')
+
+model_adidas = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text='Predator')], 
+    [KeyboardButton(text='X')],
+    [KeyboardButton(text='Copa')],
 ], 
 resize_keyboard=True,
 input_field_placeholder = 'Какая модель Вас интересует?')
