@@ -1,10 +1,15 @@
 import gspread
 import re
 from aiogram import Router, F
-from aiogram.types import Message, FSInputFile, BotCommandScopeDefault
+from aiogram.types import Message, FSInputFile, BotCommandScopeDefault, ReplyKeyboardRemove
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from datetime import datetime
+
+from app.keyboards import get_brand_keyboard
+from app.keyboards import get_model_keyboard
+from app.keyboards import application
 
 # import app.keyboards as kb
 
@@ -27,134 +32,168 @@ def convert_google_drive_link(original_url: str) -> str:
     return original_url  # Если не нашли ID, возвращаем как есть
 
 class FootbalBase:
-    def get_all_data():
+    def get_all_data_for_user(brand: str, model: str):
         gc = gspread.service_account(filename='creds.json')
         wks = gc.open("База данных KASEDO").sheet1
         all_data = wks.get_all_records()
-        return all_data
 
+        result = []
+        for item in all_data:
+            if item["Модель"] == model and item["Бренд"] == brand:  # проверяем, что значение ещё не добавлено
+                result.append(item)
+        
+        return result
+    
+    def get_brand():
+        gc = gspread.service_account(filename='creds.json')
+        wks = gc.open("База данных KASEDO").sheet1
+        brand_data_all = wks.col_values(2)
+        brand_data = list(set(brand_data_all[1:]))
+        return brand_data
+    
+    def get_model(brand: str):
+        gc = gspread.service_account(filename='creds.json')
+        wks = gc.open("База данных KASEDO").sheet1
 
+        brand_data_all = wks.col_values(2)
+        model_data_all = wks.col_values(1)
+
+        brand_model = list(zip(brand_data_all, model_data_all))[1:]
+
+        result = []
+        for item in brand_model:
+            if item[0] == brand: 
+                result.append(item[1])
+
+        # return brand_model
+        res = list(set(result))
+        return res
+    
 
 class Register(StatesGroup):
     name = State()
     tg_id = State()
     brand = State()
     model = State()
-    size = State()
-    city = State()
+    username = State()
 
-# @router.message(F.text == 'О нас')
-# @router.message(Command("about"))
-# async def cmd_about(message: Message):
-#     await message.answer('Информация о магаизине...', reply_markup=kb.after_about)
-
-# @router.message(Command("reglament"))
-# async def cmd_reglament(message: Message):
-#     reglament_pdf = FSInputFile("reglament_master.pdf")
-#     await message.answer_document(reglament_pdf,  caption="Высылаем Вам для ознакомления реглмаент работы мастера", reply_markup=kb.after_start)
+@router.message(Command("about"))
+async def cmd_about(message: Message):
+    await message.answer('⚽ KASEDO FOOTBALL ⚽\n\nПриветствуем в мире профессиональных футбольных бутс!\nМы — команда энтузиастов, которая знает о футболе всё. Наша миссия — обеспечить каждого игрока идеальной парой бутс для побед на поле.\n\nПочему мы?\n✅ Только оригинальные бутсы от ведущих брендов\n✅ Экспертная помощь в подборе размера и модели\n✅ Выгодные цены и регулярные акции\n✅ Быстрая доставка по всей стране\n\nЗабудьте о мозолях и дискомфорте — с нами вы играете на максимум!\n\nВаши победы начинаются с правильных бутс! 🏆', reply_markup=application)
 
 @router.message(CommandStart())
-async def cmd_start(message: Message):
-    # await message.answer('Приветствуем! Это наш телеграм бот заявок. Укажите параметры интересующей Вас модели, чтобы получить возможные варианты. Через некоторое время с Вами свяжется менеджер!', reply_markup=kb.main)
-    data = FootbalBase.get_all_data()[51]
-    print(data)
-    link_to_photo=convert_google_drive_link(data["Фото"])
-    print(link_to_photo)
+async def cmd_start(message: Message, state: FSMContext):
+    await state.set_state(Register.name)
 
+    await message.answer('Приветствуем! Это наш телеграм бот заявок. Укажите параметры интересующих Вас бутс и мы вышлем, чтобы получить возможные варианты в нашем магазине. Через некоторое время после оставления заявки с Вами свяжется менеджер!')
 
+    await message.answer('Как Вас зовут?')
 
-    caption = (
-        "<b>Адидас</b>\n"
-        "Цена: 22 990 руб.\n"
-        "Размер: 43 EUR\n"
-        "В наличии: 1 шт."
-    )
+@router.message(F.text == 'Оставить заявку')
+async def register_name(message: Message, state: FSMContext):
+    await state.set_state(Register.name)
+    await message.answer('Как Вас зовут?')
+
+@router.message(Register.name)
+async def register_brand(message: Message, state: FSMContext):
+    await state.update_data(name=message.text)
+
+    nickname = message.from_user.username
+    await state.update_data(username=nickname)
+
+    await state.set_state(Register.brand)
+
+    about_user_data = await state.get_data()
+    data = FootbalBase.get_brand()
     
-    # 3. ОТПРАВЛЯЕМ КАРТИНКУ - Telegram сам ее скачает!
-    await message.answer_photo(
-        photo=link_to_photo,  # ← ПРОСТО ПЕРЕДАЁМ ССЫЛКУ!
-        caption=caption,
-        parse_mode="HTML"
-    )
+    kb = get_brand_keyboard(data)
+    
+    await message.answer(f'{about_user_data["name"]}, какой бренд бутс Вас интересует?', reply_markup=kb)
 
+@router.message(Register.brand)
+async def register_model(message: Message, state: FSMContext):
+    await state.update_data(brand=message.text)
+    await state.set_state(Register.model)
 
+    about_user_data = await state.get_data()
+    brand = about_user_data["brand"]
 
-# @router.message(F.text == 'Оставить заявку')
-# async def register(message: Message, state: FSMContext):
-#     await state.set_state(Register.name)
-#     await message.answer('Напишите, пожалуйста, Ваше имя', reply_markup=kb.after_start)
+    data = FootbalBase.get_model(brand)
 
+    kb = get_model_keyboard(data)
 
-# @router.message(Register.name)
-# async def register_name(message: Message, state: FSMContext):
-#     await state.update_data(name=message.text)
-#     await state.set_state(Register.brand)
-#     data = await state.get_data()
-#     await message.answer(f'{data["name"]}, укажите интересующий Вас бренд бутс', reply_markup=kb.brand)
+    await message.answer(f"Отлично, Вы выбрали {brand}!")
+    await message.answer(f'Теперь укажите интересующую Вас модель бутс бренда {brand}', reply_markup=kb)
 
-# @router.message(Register.brand)
-# async def register_name(message: Message, state: FSMContext):
-#     await state.update_data(brand=message.text)
-#     await state.set_state(Register.model)
-#     data = await state.get_data()
-#     await message.answer(f'Теперь укажите интересующую Вас модель бутс бренда {data["brand"]}', reply_markup=kb.brand)
+@router.message(Register.model)
+async def register_result_for_user(message: Message, state: FSMContext):
+    await state.update_data(model=message.text)
 
+    about_user_data = await state.get_data()
+    brand = about_user_data["brand"]
+    model = about_user_data["model"]
 
-# @router.message(Register.age)
-# async def register_age(message: Message, state: FSMContext):
-#     await state.update_data(age=message.text)
-#     await state.set_state(Register.tel)
-#     await message.answer('Введите Ваш номер телефона')
+    await message.answer("Подождите, подбираем для Вас наилучшие варианты...", reply_markup=ReplyKeyboardRemove())
+    
+    data = FootbalBase.get_all_data_for_user(brand, model)
 
+    for item in data:
+        model_item = item["Модель"]
+        brand_item = item["Бренд"]
+        size = item["EUR"]
+        length = item["Длина стопы, см"]
+        color = item["Цвет"]
+        availability = item["Количество пар в наличии"]
+        price = item["Цена"]
+        photo = item["Фото"]
+        sole = item["Тип подошвы"]
 
-# @router.message(Register.tel)
-# async def register_tel(message: Message, state: FSMContext):
-#     await state.update_data(tel=message.text)
-#     await state.set_state(Register.nationality)
-#     await message.answer('Какое у Вас гражданство?')
+        caption = ""
 
+        if availability != "под заказ":
+            caption = (
+                "❗В НАЛИЧИИ❗\n"
+                f"⚡{model_item}⚡\n"
+                f"Цена: {price} руб.\n"
+                f"Размер: {size} EUR\n"
+                f"Длина стопы: {length}\n"
+                f"Цвет: {color}\n"
+                f"Тип подошвы: {sole}"
+            )
+        else:
+            caption = (
+                "❗ПОД ЗАКАЗ❗\n"
+                f"⚡{model_item}⚡\n"
+                f"Цена: {price} руб.\n"
+                f"Цвет: {color}\n"
+                f"Тип подошвы: {sole}"
+            )
+        
+        link = convert_google_drive_link(photo)
 
-# @router.message(Register.nationality)
-# async def register_nationality(message: Message, state: FSMContext):
-#     await state.update_data(nationality=message.text)
-#     await state.set_state(Register.type_work)
-#     await message.answer('Напишите какие бытовые работы вы умеете выполнять')
+        
+        await message.answer_photo(
+            photo=link,  
+            caption=caption,
+            parse_mode="HTML"
+        )
+    
+    data = await state.get_data()  
+    gc = gspread.service_account(filename='creds.json')
+    wks = gc.open("Заявки клиентов").sheet1
 
+    now = datetime.now()
+    formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
 
-# @router.message(Register.type_work)
-# async def register_type_work(message: Message, state: FSMContext):
-#     await state.update_data(type_work=message.text)
-#     await state.set_state(Register.experience)
-#     await message.answer('Какой у Вас опыт работы в сфере бытовых работ?', reply_markup=kb.experience)
+    array__row = [formatted_time, data["username"], data["name"],
+                  data["brand"], data["model"]]
 
+    wks.append_row(array__row)
 
-# @router.message(Register.experience)
-# async def register_experience(message: Message, state: FSMContext):
-#     await state.update_data(experience=message.text)
-#     await state.set_state(Register.instrument)
-#     await message.answer('Есть ли у Вас свой инструмент?', reply_markup=kb.yes_or_not)
+    admin_message = f"Информация по заявке:\n👤 Имя: {data.get('name', 'не указано')}\n📞 Username: {data.get('username', 'не указано')}\n🏠 Бренд: {data.get('brand', 'не указано')}\n📅 Модель: {data.get('model', 'не указано')}"
 
+    admin_id = 8244538876
 
-# @router.message(Register.instrument)
-# async def register_instrument(message: Message, state: FSMContext):
-#     await state.update_data(instrument=message.text)
-#     await state.set_state(Register.car)
-#     await message.answer('Есть ли у Вас собственный автомобиль?', reply_markup=kb.yes_or_not)
+    bot = message.bot
+    await bot.send_message(chat_id=admin_id, text=admin_message, parse_mode="HTML")
 
-
-# @router.message(Register.car)
-# async def register_car(message: Message, state: FSMContext):
-#     await state.update_data(car=message.text)
-
-#     data = await state.get_data()  # get data master
-#     gc = gspread.service_account(filename='creds.json')
-#     wks = gc.open("Заявка на трудоустройство на мастера").sheet1
-
-#     array__row = [data["name"], data["age"],
-#                   data["tel"], data["nationality"],
-#                   data["type_work"], data["experience"],
-#                   data["instrument"], data["car"], "Новая заявка"]
-
-#     wks.append_row(array__row)
-#     reglament_pdf = FSInputFile("reglament_master.pdf")
-#     await message.answer_document(reglament_pdf,  caption="Cпасибо большое за оставленную заявку.\nВ течении часа с Вами свяжется наш специалист, чтобы рассказать про нас еще больше и уточнить еще кое-какую информацию!\nА пока что высылаем Вам для ознакомления реглмаент работы мастера", reply_markup=kb.after_start)
