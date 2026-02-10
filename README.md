@@ -22,15 +22,15 @@ python main.py
 
 Для запуска в prod (продакшен) следует запускать проект в контейнере.
 
-Образ для данного телеграмм бота находится в открытом репозитории на [docker.hub](https://hub.docker.com/repository/docker/kozlovjr02/kasedo_bot/general)
+Образ для данного телеграмм бота находится в открытом репозитории на [docker.hub](https://hub.docker.com/repository/docker/kozlovjr02/kasedo_tg_bot/general)
 
 Для запуска контейнера в фоново режимвы выполните следующие команды
 ```
 ### скачать образ из репозитория
-docker image pull kozlovjr02/kasedo_bot:latest
+docker image pull kozlovjr02/kasedo_tg_bot:latest
 
 ### запустить контейнер на основе скаченного образа, указав имя контейнеру tg_job_bot
-docker run -d --name=kasedo_bot kozlovjr02/kasedo_bot:latest
+docker run -d --name=kasedo_bot kozlovjr02/kasedo_tg_bot:latest
 ```
 
 Для того, чтобы остановить контейнер для проведения регламентных работ, выполните команду
