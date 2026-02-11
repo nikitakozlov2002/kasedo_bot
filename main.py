@@ -8,11 +8,12 @@ async def set_default_commands(bot: Bot):
     """Функция для установки команд меню. Вызовите её при старте бота."""
     commands = [
         BotCommand(command="start", description="🚀 Начать работу"),
-        BotCommand(command="about", description="📋 О нас")
+        BotCommand(command="menu", description="🏠 Меню"),
+        BotCommand(command="about", description="📋 О нас"),
+        BotCommand(command="bonus", description="🎁 Бонусы"),
+        BotCommand(command="question", description="❓ Задать вопрос")
     ]
     await bot.set_my_commands(commands=commands, scope=BotCommandScopeDefault())
-
-# https://t.me/kasedo_bot
 
 async def main():
     bot = Bot(token = '8335551745:AAG6N_8290FNuOJtyvlr7590vqs1M7O3HUw')
