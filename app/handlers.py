@@ -103,8 +103,8 @@ async def register_send_message(message: Message, state: FSMContext):
 
     admin_message = f"ВОПРОС КЛИЕНТА:\n📞 Username: {data.get('username', 'не указано')}\n📅 Question: {data_message}"
 
-    # admin_id = 8244538876
-    admin_id = 530775145
+    admin_id = 8244538876
+    # admin_id = 530775145
 
     bot = message.bot
     await bot.send_message(chat_id=admin_id, text=admin_message, parse_mode="HTML")
@@ -249,8 +249,8 @@ async def register_result_for_user(message: Message, state: FSMContext):
 
     admin_message = f"Информация по заявке:\n👤 Имя: {data.get('name', 'не указано')}\n📞 Username: {data.get('username', 'не указано')}\n🏠 Бренд: {data.get('brand', 'не указано')}\n📅 Модель: {data.get('model', 'не указано')}"
 
-    # admin_id = 8244538876
-    admin_id = 530775145
+    admin_id = 8244538876
+    # admin_id = 530775145
 
     bot = message.bot
     await bot.send_message(chat_id=admin_id, text=admin_message, parse_mode="HTML")
