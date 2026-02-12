@@ -7,7 +7,7 @@ application = InlineKeyboardMarkup(
         ]
     ) 
 
-question_keyboadrd = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Задать вопрос')]], resize_keyboard=True)
+after_catalog_keyboadrd = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Задать вопрос')], [KeyboardButton(text='Оформить заказ')]], resize_keyboard=True)
 
 def get_brand_keyboard(brands: list):
     result = []
@@ -32,5 +32,12 @@ main_keyboard = InlineKeyboardMarkup(
             [InlineKeyboardButton(text="📋 О нас", callback_data="about"),  InlineKeyboardButton(text="🎁 Бонусы", callback_data="bonus")],
             [InlineKeyboardButton(text="📦 Каталог", callback_data="catalog"), InlineKeyboardButton(text="⭐ Отзывы", url="https://t.me/kasedofc/54")],
             [InlineKeyboardButton(text="❓ Задать вопрос", callback_data="question")]
+        ]
+    )
+
+choice = InlineKeyboardMarkup(
+        inline_keyboard=[
+           [InlineKeyboardButton(text="👟 Бутсы", callback_data="boots")],
+            [InlineKeyboardButton(text="🧤 Другая вещь", callback_data="another_thing")]
         ]
     ) 

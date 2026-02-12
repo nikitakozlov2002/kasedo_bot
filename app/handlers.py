@@ -11,9 +11,17 @@ from app.keyboards import get_brand_keyboard
 from app.keyboards import get_model_keyboard
 from app.keyboards import application
 from app.keyboards import main_keyboard
-from app.keyboards import question_keyboadrd
+from app.keyboards import after_catalog_keyboadrd
+from app.keyboards import choice
 
 router = Router()
+
+def find_by_artikul(items, articul):
+    """Найти товар по артикулу"""
+    for item in items:
+        if str(item.get("Артикул")) == articul: 
+            return item
+    return {}
 
 def convert_google_drive_link(original_url: str) -> str:
     """
@@ -69,14 +77,30 @@ class FootbalBase:
         res = list(set(result))
         return res
     
+    def get_product_by_articul(articul):
+        gc = gspread.service_account(filename='creds.json')
+        wks = gc.open("База данных KASEDO").sheet1
+        all_data = wks.get_all_records()
+
+        result = find_by_artikul(all_data, articul)
+
+        return result
+    
 
 class Register(StatesGroup):
     name = State()
     tg_id = State()
     brand = State()
     model = State()
+    choice = State()
+    result_catalog = State()
     username = State()
     message_to_admin = State()
+    application = State()
+    application_find_articul = State()
+    another_thing_application = State()
+    another_thing = State()
+
 
 @router.callback_query(F.data == "question")
 @router.message(Command("question"))
@@ -128,49 +152,75 @@ async def cmd_about(event: Message | CallbackQuery):
 @router.message(Command("bonus"))
 async def cmd_about(event: Message | CallbackQuery):
     if isinstance(event, CallbackQuery):
-        await event.message.answer('БОНУСНАЯ ПРОГРАММА 🎁\n\n1. ПОЛУЧАЙТЕ БОНУСЫ\nЗА КАЖДУЮ ПОКУПКУ МЫ НАЧИСЛЯЕМ НА ВАШ БОНУСНЫЙ СЧЕТ 7% ОТ ЕЕ суммы.\n\n2. КОПИТЕ И СПИСЫВАЙТЕ\nВЫ МОЖЕТЕ КОПИТЬ БОНУСЫ ДЛЯ КРУПНОЙ ПОКУПКИ ИЛИ ЧАСТИЧНО СПИСЫВАТЬ ИХ НА ОПЛАТУ СЛЕДУЮЩИХ ЗАКАЗОВ. РЕШАЕТЕ ВЫ!\n\n3. ИСПОЛЬЗУЙТЕ ВОВРЕМЯ\nБОНУСЫ НЕОБХОДИМО ПОТРАТИТЬ В ТЕЧЕНИЕ 6 МЕСЯЦЕВ С МОМЕНТА ПОКУПКИ, ПОСЛЕ ЧЕГО ОНИ СГОРАЮТ.\n\nВАША ИГРА - ВАША ВЫГОДА')
+        await event.message.answer('БОНУСНАЯ ПРОГРАММА 🎁\n\n1. ПОЛУЧАЙТЕ БОНУСЫ\nЗА КАЖДУЮ ПОКУПКУ МЫ НАЧИСЛЯЕМ НА ВАШ БОНУСНЫЙ СЧЕТ 7% ОТ ЕЕ суммы.\n\n2. КОПИТЕ И СПИСЫВАЙТЕ\nВЫ МОЖЕТЕ КОПИТЬ БОНУСЫ ДЛЯ КРУПНОЙ ПОКУПКИ ИЛИ ЧАСТИЧНО СПИСЫВАТЬ ИХ НА ОПЛАТУ СЛЕДУЮЩИХ ЗАКАЗОВ. РЕШАЕТЕ ВЫ!\n\n3. ИСПОЛЬЗУЙТЕ ВОВРЕМЯ\nБОНУСЫ НЕОБХОДИМО ПОТРАТИТЬ В ТЕЧЕНИЕ 6 МЕСЯЦЕВ С МОМЕНТА ПОКУПКИ, ПОСЛЕ ЧЕГО ОНИ СГОРАЮТ.\n\nВАША ИГРА - ВАША ВЫГОДА', reply_markup=application)
         await event.answer() 
     else:
-        await event.answer('БОНУСНАЯ ПРОГРАММА 🎁\n\n1. ПОЛУЧАЙТЕ БОНУСЫ\nЗА КАЖДУЮ ПОКУПКУ МЫ НАЧИСЛЯЕМ НА ВАШ БОНУСНЫЙ СЧЕТ 7% ОТ ЕЕ суммы.\n\n2. КОПИТЕ И СПИСЫВАЙТЕ\nВЫ МОЖЕТЕ КОПИТЬ БОНУСЫ ДЛЯ КРУПНОЙ ПОКУПКИ ИЛИ ЧАСТИЧНО СПИСЫВАТЬ ИХ НА ОПЛАТУ СЛЕДУЮЩИХ ЗАКАЗОВ. РЕШАЕТЕ ВЫ!\n\n3. ИСПОЛЬЗУЙТЕ ВОВРЕМЯ\nБОНУСЫ НЕОБХОДИМО ПОТРАТИТЬ В ТЕЧЕНИЕ 6 МЕСЯЦЕВ С МОМЕНТА ПОКУПКИ, ПОСЛЕ ЧЕГО ОНИ СГОРАЮТ.\n\nВАША ИГРА - ВАША ВЫГОДА')
+        await event.answer('БОНУСНАЯ ПРОГРАММА 🎁\n\n1. ПОЛУЧАЙТЕ БОНУСЫ\nЗА КАЖДУЮ ПОКУПКУ МЫ НАЧИСЛЯЕМ НА ВАШ БОНУСНЫЙ СЧЕТ 7% ОТ ЕЕ суммы.\n\n2. КОПИТЕ И СПИСЫВАЙТЕ\nВЫ МОЖЕТЕ КОПИТЬ БОНУСЫ ДЛЯ КРУПНОЙ ПОКУПКИ ИЛИ ЧАСТИЧНО СПИСЫВАТЬ ИХ НА ОПЛАТУ СЛЕДУЮЩИХ ЗАКАЗОВ. РЕШАЕТЕ ВЫ!\n\n3. ИСПОЛЬЗУЙТЕ ВОВРЕМЯ\nБОНУСЫ НЕОБХОДИМО ПОТРАТИТЬ В ТЕЧЕНИЕ 6 МЕСЯЦЕВ С МОМЕНТА ПОКУПКИ, ПОСЛЕ ЧЕГО ОНИ СГОРАЮТ.\n\nВАША ИГРА - ВАША ВЫГОДА', reply_markup=application)
 
 @router.message(CommandStart())
 @router.message(Command("menu"))
 async def cmd_start(message: Message, state: FSMContext):
-    await state.set_state(Register.name)
+    await state.set_state(Register.brand)
 
     await message.answer('Приветствуем! Это наш телеграм бот заявок. Укажите параметры интересующих Вас бутс и мы вышлем, чтобы получить возможные варианты в нашем магазине. Через некоторое время после оставления заявки с Вами свяжется менеджер!', reply_markup=main_keyboard)
 
+
 @router.callback_query(F.data == "catalog")
-@router.callback_query(F.data == "about")
-@router.message(F.text == 'Получить выборку')
-async def register_name(event: Message, state: FSMContext):
-    await state.set_state(Register.name)
-    if isinstance(event, CallbackQuery):
-        await event.message.answer('Как Вас зовут?', reply_markup=None)
-        await event.answer() 
-    else:
-        await event.answer('Как Вас зовут?', reply_markup=None)
+async def register_brand(event: Message | CallbackQuery, state: FSMContext):
+    nickname = event.from_user.username
+    await state.update_data(username=nickname)
+    await event.message.answer('Что вы хотите найти?', reply_markup=choice)
+    await event.answer() 
 
-@router.message(Register.name)
-async def register_brand(message: Message, state: FSMContext):
-    await state.update_data(name=message.text)
+@router.callback_query(F.data == "another_thing")
+async def register_brand(event: Message | CallbackQuery, state: FSMContext):
+    await state.set_state(Register.another_thing_application)
+    await event.message.answer('Напишите в ответном сообщении конкретно какая вещь Вас интересует?', reply_markup=None)
+    
+@router.message(Register.another_thing_application)
+async def register_brand(event: Message, state: FSMContext):
+    await state.set_state(None)
 
-    nickname = message.from_user.username
+    another_thing = event.text
+    nickname = event.from_user.username
+
+    result_row = []
+
+    now = datetime.now()
+    formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
+
+    result_row = [formatted_time, nickname, another_thing]
+
+    gc = gspread.service_account(filename='creds.json')
+    wks = gc.open("Оформленные заявки").sheet1
+
+    wks.append_row(result_row)
+
+    await event.answer("Спасибо за оформленный заказ, менеджер напишет Вам в течении часа для уточнения деталей!", reply_markup=main_keyboard)
+    
+
+@router.callback_query(F.data == "boots")
+@router.message(Register.brand)
+async def register_brand(event: Message | CallbackQuery, state: FSMContext):
+    nickname = event.from_user.username
     await state.update_data(username=nickname)
 
-    await state.set_state(Register.brand)
+    await state.set_state(Register.model)
 
-    about_user_data = await state.get_data()
     data = FootbalBase.get_brand()
-    
+
     kb = get_brand_keyboard(data)
     
-    await message.answer(f'{about_user_data["name"]}, какой бренд бутс Вас интересует?', reply_markup=kb)
+    if isinstance(event, CallbackQuery):
+        await event.message.answer('Какой бренд бутс Вас интересует?', reply_markup=kb)
+        await event.answer() 
+    else:
+        await event.answer('Какой бренд бутс Вас интересует?', reply_markup=kb)
 
-@router.message(Register.brand)
+@router.message(Register.model)
 async def register_model(message: Message, state: FSMContext):
     await state.update_data(brand=message.text)
-    await state.set_state(Register.model)
+    await state.set_state(Register.result_catalog)
 
     about_user_data = await state.get_data()
     brand = about_user_data["brand"]
@@ -182,7 +232,7 @@ async def register_model(message: Message, state: FSMContext):
     await message.answer(f"Отлично, Вы выбрали {brand}!")
     await message.answer(f'Теперь укажите интересующую Вас модель бутс бренда {brand}', reply_markup=kb)
 
-@router.message(Register.model)
+@router.message(Register.result_catalog)
 async def register_result_for_user(message: Message, state: FSMContext):
     await state.update_data(model=message.text)
 
@@ -204,11 +254,13 @@ async def register_result_for_user(message: Message, state: FSMContext):
         price = item["Цена"]
         photo = item["Фото"]
         sole = item["Тип подошвы"]
+        articul = item["Артикул"]
 
         caption = ""
 
         if availability != "под заказ":
             caption = (
+                f"🔍 АРТИКУЛ №: {articul}\n\n"
                 "❗В НАЛИЧИИ❗\n"
                 f"⚡{model_item}⚡\n"
                 f"Цена: {price} руб.\n"
@@ -219,6 +271,7 @@ async def register_result_for_user(message: Message, state: FSMContext):
             )
         else:
             caption = (
+                f"🔍 АРТИКУЛ №: {articul}\n\n"
                 "❗ПОД ЗАКАЗ❗\n"
                 f"⚡{model_item}⚡\n"
                 f"Цена: {price} руб.\n"
@@ -242,12 +295,12 @@ async def register_result_for_user(message: Message, state: FSMContext):
     now = datetime.now()
     formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
 
-    array__row = [formatted_time, data["username"], data["name"],
+    array__row = [formatted_time, data["username"],
                   data["brand"], data["model"]]
 
     wks.append_row(array__row)
 
-    admin_message = f"Информация по заявке:\n👤 Имя: {data.get('name', 'не указано')}\n📞 Username: {data.get('username', 'не указано')}\n🏠 Бренд: {data.get('brand', 'не указано')}\n📅 Модель: {data.get('model', 'не указано')}"
+    admin_message = f"Информация по заявке:\n📞 Username: {data.get('username', 'не указано')}\n🏠 Бренд: {data.get('brand', 'не указано')}\n📅 Модель: {data.get('model', 'не указано')}"
 
     admin_id = 8244538876
     # admin_id = 530775145
@@ -263,4 +316,36 @@ async def register_result_for_user(message: Message, state: FSMContext):
         f"💬 Если у вас есть дополнительные вопросы - нажмите кнопку ниже"
     )
 
-    await message.answer(user_response, reply_markup=question_keyboadrd)
+    await state.set_state(Register.application_find_articul)
+
+    await message.answer(user_response, reply_markup=after_catalog_keyboadrd)
+
+@router.message(Register.application_find_articul)
+@router.message(F.text == 'Оформить заказ')
+async def register_application(message: Message, state: FSMContext):
+    await state.set_state(Register.application)
+
+    await message.answer("Напишите номер артикула модели, которую Вы, хотите заказать", eply_markup=None)
+
+@router.message(Register.application)
+async def register_application(message: Message, state: FSMContext):
+    await state.set_state(None)
+
+    articul = str(message.text).strip()
+    nickname = message.from_user.username
+
+    data = FootbalBase.get_product_by_articul(articul)
+
+    result_row = []
+
+    now = datetime.now()
+    formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
+
+    result_row = [formatted_time, nickname, articul, data.get('Бренд', 'Не известно - не верный артикул'), data.get('Модель', 'Не известно - не верный артикул')]
+
+    gc = gspread.service_account(filename='creds.json')
+    wks = gc.open("Оформленные заявки").sheet1
+
+    wks.append_row(result_row)
+
+    await message.answer("Спасибо за оформленный заказ, менеджер напишет Вам в течении часа для уточнения деталей!", reply_markup=main_keyboard)
